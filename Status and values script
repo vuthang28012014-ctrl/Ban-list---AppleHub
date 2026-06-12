@@ -1,0 +1,204 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ========================================================
+-- 1. TẠO KHUNG MENU BẰNG CODE CUSTOM THUẦN (ROBLOX INSTANCE)
+-- ========================================================
+local StatusGui = Instance.new("ScreenGui")
+StatusGui.Name = "MainFrame"
+StatusGui.ResetOnSpawn = false
+
+pcall(function()
+    StatusGui.Parent = game:GetService("CoreGui")
+end)
+if not StatusGui.Parent then
+    StatusGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 240, 0, 40) 
+MainFrame.Position = UDim2.new(1, -260, 0.25, 0) 
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18) 
+MainFrame.BorderColor3 = Color3.fromRGB(45, 45, 45) 
+MainFrame.BorderSizePixel = 1
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.Parent = StatusGui
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, 0, 0, 26)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(28, 28, 28) 
+TitleLabel.BorderColor3 = Color3.fromRGB(45, 45, 45)
+TitleLabel.BorderSizePixel = 1
+TitleLabel.Text = "  STATUS / VALUES (Press L to Hide)"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 12
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Parent = MainFrame
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Padding = UDim.new(0, 3) 
+
+local PaddingFrame = Instance.new("Frame")
+PaddingFrame.Size = UDim2.new(1, 0, 0, 26)
+PaddingFrame.BackgroundTransparency = 1
+PaddingFrame.LayoutOrder = 0
+PaddingFrame.Parent = MainFrame
+
+-- ========================================================
+-- 2. HÀM CUSTOM ĐỂ NẠP / CẬP NHẬT CÁC DÒNG VALUES
+-- ========================================================
+_G.updateValue = function(infoName, infoValue, customColor)
+    local rowName = infoName .. "_Row"
+    local row = MainFrame:FindFirstChild(rowName)
+    
+    if not row then
+        row = Instance.new("Frame")
+        row.Name = rowName
+        row.Size = UDim2.new(1, 0, 0, 22)
+        row.BackgroundTransparency = 1
+        row.LayoutOrder = #MainFrame:GetChildren()
+        
+        local leftLabel = Instance.new("TextLabel")
+        leftLabel.Size = UDim2.new(0.6, 0, 1, 0)
+        leftLabel.Position = UDim2.new(0, 10, 0, 0)
+        leftLabel.BackgroundTransparency = 1
+        leftLabel.Text = infoName .. ":"
+        leftLabel.TextColor3 = Color3.fromRGB(180, 180, 180) 
+        leftLabel.TextSize = 13
+        leftLabel.Font = Enum.Font.SourceSans
+        leftLabel.TextXAlignment = Enum.TextXAlignment.Left
+        leftLabel.Parent = row
+        
+        local rightLabel = Instance.new("TextLabel")
+        rightLabel.Name = "ValueLabel"
+        rightLabel.Size = UDim2.new(0.4, -10, 1, 0)
+        rightLabel.Position = UDim2.new(0.6, 0, 0, 0)
+        rightLabel.BackgroundTransparency = 1
+        rightLabel.Text = tostring(infoValue)
+        rightLabel.TextColor3 = customColor or Color3.fromRGB(255, 255, 255) 
+        rightLabel.TextSize = 13
+        rightLabel.Font = Enum.Font.SourceSansBold
+        rightLabel.TextXAlignment = Enum.TextXAlignment.Right
+        rightLabel.Parent = row
+        
+        row.Parent = MainFrame
+        MainFrame.Size = UDim2.new(0, 240, 0, #MainFrame:GetChildren() * 24)
+    else
+        local rightLabel = row:FindFirstChild("ValueLabel")
+        if rightLabel then
+            rightLabel.Text = tostring(infoValue)
+            if customColor then
+                rightLabel.TextColor3 = customColor
+            end
+        end
+    end
+end
+
+-- ========================================================
+-- 3. ĐỒNG BỘ DỮ LIỆU GAME (SỬ DỤNG EVENT ĐỂ CHỐNG CHỚP NHÁY SỐ)
+-- ========================================================
+
+-- Hàm ép mở máy Investors qua ProximityPrompt
+local function forceLoadInvestors()
+    pcall(function()
+        local prompt = workspace:FindFirstChild("Tycoon3")
+            and workspace.Tycoon3:FindFirstChild("Rebirth")
+            and workspace.Tycoon3.Rebirth:FindFirstChild("Investors")
+            and workspace.Tycoon3.Rebirth.Investors:FindFirstChild("Alien")
+            and workspace.Tycoon3.Rebirth.Investors.Alien:FindFirstChild("HumanoidRootPart")
+            and workspace.Tycoon3.Rebirth.Investors.Alien.HumanoidRootPart:FindFirstChild("MenuPrompt")
+
+        if prompt and fireproximityprompt then
+            fireproximityprompt(prompt) 
+            task.wait(0.3) 
+            
+            local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+            local menu = pGui and pGui:FindFirstChild("Rebirth") and pGui.Rebirth:FindFirstChild("InvestorsMenu")
+            if menu then
+                menu.Visible = false 
+            end
+        end
+    end)
+end
+
+-- Khởi tạo giá trị ban đầu cho các chỉ số để khung UI không bị trống khi mới bật script
+local valuesFolder = LocalPlayer:WaitForChild("Values", 10)
+if valuesFolder then
+    local function updateAllAttributes()
+        local function checkAttr(name)
+            local val = valuesFolder:GetAttribute(name)
+            return val ~= nil and tostring(val) or nil
+        end
+        
+        -- Chỉ cập nhật lên UI nếu giá trị lấy ra thực sự khác nil (tránh bị đè số 0 lỗi)
+        if checkAttr("CashDropsPickedUp") then _G.updateValue("Cash Drops Picked Up", checkAttr("CashDropsPickedUp"), Color3.fromRGB(255, 200, 50)) end
+        if checkAttr("CashVineAvailable") then _G.updateValue("Cash Vine Available", checkAttr("CashVineAvailable"), Color3.fromRGB(255, 200, 50)) end
+        if checkAttr("CashVineUses") then _G.updateValue("Cash Vine Uses", checkAttr("CashVineUses"), Color3.fromRGB(255, 200, 50)) end
+        if checkAttr("FruitsClicked") then _G.updateValue("Fruits Clicked", checkAttr("FruitsClicked"), Color3.fromRGB(255, 200, 50)) end
+        if checkAttr("MinigameRacePlayed") then _G.updateValue("Minigame Race Played", checkAttr("MinigameRacePlayed"), Color3.fromRGB(255, 200, 50)) end
+        if checkAttr("VoidEvents") then _G.updateValue("Void Events", checkAttr("VoidEvents"), Color3.fromRGB(255, 200, 50)) end
+    end
+
+    -- Chạy nạp chữ lần đầu tiên
+    updateAllAttributes()
+
+    -- Bắt sự kiện: Bất kỳ chỉ số nào trong folder thay đổi thì lập tức cập nhật, không dùng vòng lặp quét mò nữa
+    valuesFolder.AttributeChanged:Connect(function(attributeName)
+        local val = valuesFolder:GetAttribute(attributeName)
+        if val ~= nil then
+            if attributeName == "CashDropsPickedUp" then _G.updateValue("Cash Drops Picked Up", tostring(val), Color3.fromRGB(255, 200, 50))
+            elseif attributeName == "CashVineAvailable" then _G.updateValue("Cash Vine Available", tostring(val), Color3.fromRGB(255, 200, 50))
+            elseif attributeName == "CashVineUses" then _G.updateValue("Cash Vine Uses", tostring(val), Color3.fromRGB(255, 200, 50))
+            elseif attributeName == "FruitsClicked" then _G.updateValue("Fruits Clicked", tostring(val), Color3.fromRGB(255, 200, 50))
+            elseif attributeName == "MinigameRacePlayed" then _G.updateValue("Minigame Race Played", tostring(val), Color3.fromRGB(255, 200, 50))
+            elseif attributeName == "VoidEvents" then _G.updateValue("Void Events", tostring(val), Color3.fromRGB(255, 200, 50))
+            end
+        end
+    end)
+end
+
+-- Vòng lặp chạy riêng cho Cash và Investors (Vì 2 cái này nằm ở Leaderstats và PlayerGui)
+task.spawn(function()
+    while true do
+        -- Đồng bộ Cash
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        local cashObj = leaderstats and leaderstats:FindFirstChild("Cash")
+        if cashObj then
+            _G.updateValue("Estimated Current Cash", cashObj.Value, Color3.fromRGB(0, 255, 120))
+        end
+        
+        -- Đồng bộ Investors
+        local investorText = nil
+        pcall(function()
+            local quantityObj = LocalPlayer.PlayerGui.Rebirth.InvestorsMenu.Body.Amount.Quantity
+            if quantityObj and quantityObj.Text ~= "" and quantityObj.Text ~= "0" then
+                investorText = quantityObj.Text
+            end
+        end)
+        
+        if investorText then
+            _G.updateValue("Current Total Investors", investorText, Color3.fromRGB(0, 210, 255))
+        else
+            _G.updateValue("Current Total Investors", "Loading...", Color3.fromRGB(255, 150, 0))
+            forceLoadInvestors()
+        end
+        
+        task.wait(1) -- Giảm tải xuống 1 giây quét 1 lần cho nhẹ máy
+    end
+end)
+
+-- ========================================================
+-- 4. PHÍM TẮT L ĐỂ ẨN / HIỆN NHANH MENU BẰNG TAY
+-- ========================================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.L then
+        StatusGui.Enabled = not StatusGui.Enabled
+    end
+end)
