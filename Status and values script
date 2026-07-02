@@ -1,6 +1,13 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+
+-- Khai báo các Module xử lý dữ liệu ngầm của game Sell Lemons
+local function req(p) local ok, m = pcall(require, p) return ok and m or nil end
+local ProgTycoonModule     = req(RS:WaitForChild("Modules"):WaitForChild("Tycoon"):WaitForChild("Tycoon"))
+local ClientTycoonRebirth   = req(RS:WaitForChild("Modules"):WaitForChild("Tycoon"):WaitForChild("Component"):WaitForChild("Client"):WaitForChild("ClientTycoonRebirth"))
+local ClientTycoonEvolution = req(RS:WaitForChild("Modules"):WaitForChild("Tycoon"):WaitForChild("Component"):WaitForChild("Client"):WaitForChild("ClientTycoonEvolution"))
 
 -- ========================================================
 -- 1. TẠO KHUNG MENU BẰNG CODE CUSTOM THUẦN (ROBLOX INSTANCE)
@@ -164,7 +171,7 @@ if valuesFolder then
     end)
 end
 
--- Vòng lặp chạy riêng cho Cash và Investors (Vì 2 cái này nằm ở Leaderstats và PlayerGui)
+-- Vòng lặp chạy riêng cho Cash, Investors, Rebirths và Evolution %
 task.spawn(function()
     while true do
         -- Đồng bộ Cash
@@ -190,7 +197,30 @@ task.spawn(function()
             forceLoadInvestors()
         end
         
-        task.wait(1) -- Giảm tải xuống 1 giây quét 1 lần cho nhẹ máy
+        -- Đọc dữ liệu ngầm từ hệ thống game để cập nhật Rebirths & Evolution %
+        local t = ProgTycoonModule and ProgTycoonModule.getLocal()
+        if t then
+            pcall(function()
+                -- Lấy số lần Rebirth hiện tại
+                local rb = t:GetComponent(ClientTycoonRebirth)
+                if rb then
+                    local rebirthValue = rb:GetRebirths()
+                    _G.updateValue("Current Rebirths", tostring(rebirthValue), Color3.fromRGB(230, 100, 255))
+                end
+
+                -- Lấy tiến trình Evolve hiện tại chuyển đổi sang %
+                local ev = t:GetComponent(ClientTycoonEvolution)
+                if ev then
+                    local progress = ev:GetEvolutionProgress()
+                    if type(progress) == "number" then
+                        local percent = math.clamp(progress * 100, 0, 100)
+                        _G.updateValue("Evolution Progress", string.format("%.0f%%", percent), Color3.fromRGB(255, 100, 100))
+                    end
+                end
+            end)
+        end
+        
+        task.wait(1) -- Quét định kỳ 1 giây 1 lần đồng bộ mượt mà, siêu nhẹ máy
     end
 end)
 
